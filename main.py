@@ -3,26 +3,44 @@ from tkinter import ttk
 import cv2
 import PIL.Image, PIL.ImageTk
 import mediapipe
+import time
 from threading import Thread
 import HandTracking
 
 class MyVideoCapture:
     def __init__(self, video_source = 0):
         self.vid = cv2.VideoCapture(video_source, cv2.CAP_DSHOW)
+
         if not self.vid.isOpened():
             raise ValueError("Unable to open video source", video_source)
+        self.vid.set(3, 640)
+        self.vid.set(4, 480)
+
+        # Initilialize hands module
+        self.mpHands = mediapipe.solutions.hands
+        self.hands = self.mpHands.Hands()
+        self.mpDraw = mediapipe.solutions.drawing_utils
 
     def get_frame(self):
         if self.vid.isOpened():
             ret, frame = self.vid.read()
-            cv2.flip(frame, 1)
+            frame = cv2.flip(frame, 1)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Open comment below to display landmarks on video feed
+            frame = self.display_lmarks(frame)
             if ret:
                 return (ret, frame)
             else:
                 return (ret, None)
         else:
             return (ret, None)
+
+    def display_lmarks(self, frame):
+        results = self.hands.process(frame)
+        if results.multi_hand_landmarks:
+            for h in results.multi_hand_landmarks:
+                self.mpDraw.draw_landmarks(frame, h, self.mpHands.HAND_CONNECTIONS);
+        return frame
 
     # Release the video source when the object is destroyed
     def __del__(self):
@@ -31,7 +49,7 @@ class MyVideoCapture:
 
 class App:
     def __init__(self, window):
-        ### Main Window Configurations##
+        ###---------- Main Window Configurations ----------###
         # Main window will stay at top-left corner and always on top of other windows
         self.window = window
         self.window.resizable(False, False)
@@ -75,7 +93,7 @@ class App:
 
         ###----------- Video Capture -----------###
         self.vid = MyVideoCapture()
-
+        self.pTime = 0 # Using for fps calcutalion
         self.read_thread = Thread(target = self.update, args=(), daemon=True)
         self.read_thread.start()
         self.window.mainloop()
@@ -139,21 +157,32 @@ class App:
 
     # Update canvas display using video frames
     def update(self):
-        ret, frame = self.vid.get_frame()
-        if ret and self.canvas.cget('state') == 'normal':               
-            self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
-            self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
+        while True:
+            ret, frame = self.vid.get_frame()
+            if ret and self.canvas.cget('state') == 'normal':
+                # Display fps
+                cTime = time.time()
+                fps = 1 / (cTime - self.pTime)
+                self.pTime = cTime
+                cv2.putText(frame, str(int(fps)), 
+                        (20, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 3)
 
-        if self.m_is_on:
-            pass
+                # Send video frame to canvas
+                self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
+                self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
 
-        if self.d_is_on:
-            pass
+            if self.m_is_on:
+                pass
 
-        if self.t_is_on:
-            pass
+            if self.d_is_on:
+                pass
 
-        self.window.after(33, self.update)
+            if self.t_is_on:
+                pass
+
+            time.sleep(0.01)
+
+        ##self.window.after(33, self.update)
 
 
     def mouse(self):
