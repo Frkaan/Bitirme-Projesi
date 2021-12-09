@@ -1,12 +1,12 @@
 import tkinter
-from tkinter import ttk
 import cv2
-import PIL.Image, PIL.ImageTk
-import mediapipe
 import time
+import PIL.Image, PIL.ImageTk
 from threading import Thread
-import HandTracking
+
+import HandTracking as ht
 import VideoCapture as vp
+import SideWindow as sw
 
 class App:
     def __init__(self, window):
@@ -20,7 +20,7 @@ class App:
 
         ###---------- Building UI ----------###
         # Buttons
-        buttonLabel = tkinter.Label(self.window)
+        buttonLabel = tkinter.Label(self.window, borderwidth=4, relief="ridge")
         buttonLabel.configure(background="#F5DD84")
         buttonLabel.grid(row = 0, column = 0, columnspan = 5)
 
@@ -49,14 +49,17 @@ class App:
         self.canvas.grid_remove()
 
         #Side window for draw and type functions, hidden at start
-        self.side_window = SideWindow()
+        self.side_window = sw.SideWindow()
         self.side_window.withdraw()
 
         ###----------- Video Capture -----------###
         self.vid = vp.VideoCapture()
         self.pTime = 0 # Using for fps calcutalion
-        self.read_thread = Thread(target = self.update, args=(), daemon=True)
-        self.read_thread.start()
+
+        # Start update thread
+        read_thread = Thread(target = self.update, args=(), daemon=True)
+        read_thread.start()
+
         self.window.mainloop()
 
     # This method will be used to show/hide camera display
@@ -116,15 +119,16 @@ class App:
         self.side_window.destroy()
         self.window, self.side_window = None, None
 
-    # Update canvas display using video frames
+    # Update application
     def update(self):
         while True:
             ret, frame = self.vid.get_frame()
+            cTime = time.time()
+            fps = 1 / (cTime - self.pTime)
+            self.pTime = cTime
+            print("FPS:", int(fps))
             if ret and self.canvas.cget('state') == 'normal':
                 # Display fps
-                cTime = time.time()
-                fps = 1 / (cTime - self.pTime)
-                self.pTime = cTime
                 cv2.putText(frame, str(int(fps)), 
                         (20, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 3)
 
@@ -132,8 +136,10 @@ class App:
                 self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
                 self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
 
+            # Control threads will be started here
             if self.m_is_on:
-                pass
+                m_thread = Thread(target=self.mouse, args=(frame, ), daemon=True)
+                m_thread.start()
 
             if self.d_is_on:
                 pass
@@ -141,11 +147,17 @@ class App:
             if self.t_is_on:
                 pass
 
-            time.sleep(0.01)
+            # Use sleep to be able to catch all frames, but FPS drops
+            # When not used FPS gets higher and ui lose some frames
+            # but it is not important because processing creates a delay
+            # that work likes a sleep
+            #time.sleep(0.03)
 
-        ##self.window.after(33, self.update)
-    def mouse(self):
-        pass
+        #self.window.after(33, self.update)
+
+    def mouse(self, frame):
+        tracker = ht.HandTracker()
+        lmList = tracker.get_hand_coordinates(frame)
 
     def draw(self):
         pass
@@ -153,39 +165,5 @@ class App:
     def type(self):
         pass
 
-    
-class SideWindow:
-    def __init__(self):
-        self.side_window = tkinter.Tk()
-        self.side_window.resizable(False, False)
-        self.side_window.attributes('-topmost', True)
-        self.side_window.attributes('-alpha', 0.5)
-        self.side_window.overrideredirect(True)
-        self.side_window.configure(background="#F5DD84")
-        self.screen_width = self.side_window.winfo_screenwidth()
-        self.screen_height = self.side_window.winfo_screenheight()
-        self.side_window.geometry("%dx%d+%d+%d" % (self.screen_width-650, self.screen_height, 644, 0))
-
-        self.top_bar = tkinter.Label(self.side_window, bg = "#F5DD84")
-        self.top_bar.grid(row=0, column=0)
-
-        self.label = tkinter.Label(self.top_bar, text = "Opacity", bg = "#F5DD84")
-        self.label.config(font=("Courier Bold", 20))
-        self.label.grid(row = 1, column=0, padx=20, pady=10)
-
-        self.slider = ttk.Scale(self.top_bar,from_ = 0.2, to = 1.0, value = 1.0, orient = tkinter.HORIZONTAL, command=self.slide)
-        self.slider.grid(row = 2, column=0, padx=20)
-
-    def slide(self, x):
-        self.side_window.attributes('-alpha', self.slider.get())
-
-    def withdraw(self):
-        self.side_window.withdraw()
-
-    def deiconify(self):
-        self.side_window.deiconify()
-
-    def destroy(self):
-        self.side_window.destroy()
 
 app = App(tkinter.Tk())

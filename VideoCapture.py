@@ -1,8 +1,11 @@
 import cv2
 import mediapipe
 
+# This object reads camera frames then apply mediapipe landmarks
+# on frames and return that frame
 class VideoCapture:
     def __init__(self, video_source = 0):
+        # Camera setup
         self.vid = cv2.VideoCapture(video_source, cv2.CAP_DSHOW)
 
         if not self.vid.isOpened():
@@ -17,10 +20,11 @@ class VideoCapture:
 
     def get_frame(self):
         if self.vid.isOpened():
+            # Read frame and flip vertically for syncronize with movement direction
             ret, frame = self.vid.read()
             frame = cv2.flip(frame, 1)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # Open comment below to display landmarks on video feed
+            # Apllying landmarks to frame
             frame = self.display_lmarks(frame)
             if ret:
                 return (ret, frame)
