@@ -24,6 +24,7 @@ class VideoCapture:
             ret, frame = self.vid.read()
             frame = cv2.flip(frame, 1)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            cv2.rectangle(frame, (80, 80), (560, 400), (255, 0, 0), 1)
 
             results = self.hands.process(frame)
             # Apllying landmarks to frame

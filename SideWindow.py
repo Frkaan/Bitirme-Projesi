@@ -18,11 +18,11 @@ class SideWindow:
 
         ###---------- Building UI ----------###
         # Top Bar
-        self.top_bar = tkinter.Label(self.side_window, bg = "#F5DD84", borderwidth=4, relief="ridge")
+        self.top_bar = tkinter.Label(self.side_window, bg = "#FFE547", borderwidth=4, relief="ridge")
         self.top_bar.grid(sticky="ew")
 
         # Top Bar Labels
-        self.label = tkinter.Label(self.top_bar, text = "Opacity", bg = "#6FC8EB", borderwidth=2, relief="ridge")
+        self.label = tkinter.Label(self.top_bar, text = "Opacity", bg = "#50BBEB", borderwidth=2, relief="ridge")
         self.label.config(font=("Courier Bold", 20))
         self.label.grid(row = 1, column=0, padx=20, pady=10)
 

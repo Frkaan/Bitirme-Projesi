@@ -13,4 +13,13 @@ class HandTracker:
 				x_pix , y_pix = int(mark.x * 640), int(mark.y * 480)
 				markList.append([id, x_pix, y_pix])
 
-		return markList
+
+	# Check if thumb, index and middle fingers tips are in the frame
+	def check_fingers(self, markList):
+		for i in range(4,13,4):
+			if markList[i][1] > 640 or  markList[i][2] > 480 or markList[i][1] < 0 or markList[i][2] < 0:
+				return False
+
+		return True
+
+	
