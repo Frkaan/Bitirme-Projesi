@@ -35,9 +35,9 @@ These sections will be briefly referred to as mouse control, drawing and typing 
   ```sh
   pip install opencv-python
   ```
-* AutoPy
+* PyAutoGui
   ```sh
-  pip install autopy
+  pip install pyautogui
   ```
 * MediaPipe
   ```sh
