@@ -4,9 +4,10 @@ import time
 import PIL.Image, PIL.ImageTk
 from threading import Thread
 
+import SideWindow as sw
 import HandTracking as ht
 import VideoCapture as vp
-import SideWindow as sw
+
 
 class App:
     def __init__(self, window):
@@ -54,7 +55,8 @@ class App:
 
         ###----------- Video Capture -----------###
         self.vid = vp.VideoCapture()
-        self.pTime = 0 # Using for fps calcutalion
+        self.start = 0 # Using for fps calcutalion
+        self.display_switch = False
 
         # Start update thread
         read_thread = Thread(target = self.update, args=(), daemon=True)
@@ -68,10 +70,12 @@ class App:
             self.canvas.grid_remove()
             self.canvas.config(state='disable')
             self.cam_btn.config(bg="#6FC8EB")
+            self.display_switch = False
         else:
             self.canvas.grid()
             self.canvas.config(state='normal')
             self.cam_btn.config(bg="#2B7DF0")
+            self.display_switch = True
 
     def mouse_control(self):
         if self.m_is_on == False and self.d_is_on == False and self.t_is_on == False:
@@ -122,30 +126,43 @@ class App:
     # Update application
     def update(self):
         while True:
-            ret, frame = self.vid.get_frame()
-            cTime = time.time()
-            fps = 1 / (cTime - self.pTime)
-            self.pTime = cTime
+            ret, frame, results = self.vid.get_frame(self.display_switch)
+            end = time.time()
+            fps = 1 / (end - self.start)
+            self.start = end
             print("FPS:", int(fps))
-            if ret and self.canvas.cget('state') == 'normal':
-                # Display fps
-                cv2.putText(frame, str(int(fps)), 
-                        (20, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 3)
 
-                # Send video frame to canvas
-                self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
-                self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
+            if ret:
+                ###---------- Display ----------###
+                if self.canvas.cget('state') == 'normal':
+                    # Display fps
+                    cv2.putText(frame, str(int(fps)),(20, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 3)
 
-            # Control threads will be started here
-            if self.m_is_on:
-                m_thread = Thread(target=self.mouse, args=(frame, ), daemon=True)
-                m_thread.start()
+                    # Send video frame to canvas
+                    self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
+                    self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
 
-            if self.d_is_on:
-                pass
+                ###---------- Create Landmark List ----------###
+                markList = list()
+                lm_thread = Thread(target=self.get_landmarks, args=(results, markList), daemon=True)
+                lm_thread.start()
+                lm_thread.join()
 
-            if self.t_is_on:
-                pass
+                if len(markList)!= 0:
+                    print(markList)
+                    pass
+
+                ###---------- Mouse Control ----------###
+                if self.m_is_on:
+                    pass
+
+                ###---------- Drawing ----------###
+                if self.d_is_on:
+                    pass
+
+                ###---------- Typing ----------###
+                if self.t_is_on:
+                    pass
 
             # Use sleep to be able to catch all frames, but FPS drops
             # When not used FPS gets higher and ui lose some frames
@@ -155,9 +172,13 @@ class App:
 
         #self.window.after(33, self.update)
 
-    def mouse(self, frame):
-        tracker = ht.HandTracker()
-        lmList = tracker.get_hand_coordinates(frame)
+    def get_landmarks(self, results, markList):
+        tracker = ht.HandTracker(results)
+        lmList = tracker.get_hand_coordinates(markList)
+        return lmList
+
+    def mouse(self):
+        pass
 
     def draw(self):
         pass
