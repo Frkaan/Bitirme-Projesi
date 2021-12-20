@@ -35,7 +35,7 @@ class SideWindow:
         self.side_window.attributes('-alpha', self.slider.get())
 
 
-    # These method makes object behave like tkinter window
+    # Copying tkinter window object functions
     def withdraw(self):
         self.side_window.withdraw()
 

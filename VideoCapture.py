@@ -15,6 +15,7 @@ class VideoCapture:
 
         # Initilialize hands module
         self.mpHands = mediapipe.solutions.hands
+        # Only captures one hand that shown to camera
         self.hands = self.mpHands.Hands(False, 1, 1, 0.5, 0.5)
         self.mpDraw = mediapipe.solutions.drawing_utils
 
@@ -24,13 +25,12 @@ class VideoCapture:
             ret, frame = self.vid.read()
             frame = cv2.flip(frame, 1)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Highlighting the borders of controlling field
             cv2.rectangle(frame, (80, 80), (560, 400), (255, 0, 0), 1)
-
             results = self.hands.process(frame)
-            # Apllying landmarks to frame
-            if display==True:
+            # Applying landmarks to frame
+            if display == True:
                 frame = self.display_lmarks(frame, results)
-
             if ret:
                 return (ret, frame, results)
             else:
@@ -38,6 +38,7 @@ class VideoCapture:
         else:
             return (ret, None)
 
+    # If display flag is true then draw landmarks on frame
     def display_lmarks(self, frame, results):
         if results.multi_hand_landmarks:
             for h in results.multi_hand_landmarks:
