@@ -12,6 +12,7 @@ from threading import Thread
 import SideWindow as sw
 import HandTracking as ht
 import VideoCapture as vp
+pyautogui.FAILSAFE = False
 
 lastClickX = 0
 lastClickY = 0
@@ -24,10 +25,10 @@ class App:
         self.window.resizable(False, False)
         self.window.attributes('-topmost', True)
         self.window.overrideredirect(True)
+        self.window.configure(background="#FFE547")
         self.window.bind('<Button-1>', self.SaveLastClickPos)
         self.window.bind('<B1-Motion>', self.Dragging)
-        self.window.configure(background="#FFE547")
-
+        
         ###---------- Building UI ----------###
         # Buttons Label
         buttonLabel = tkinter.Label(self.window, borderwidth=4, relief="ridge")
@@ -71,6 +72,7 @@ class App:
 
         self.click = 0 # Delay variable for click event
         self.start = 0 # Fps calculation start time
+        self.hold = False
         self.tracker = ht.HandTracker() # Init hand tracking module
         
         # Start update thread
@@ -83,7 +85,6 @@ class App:
         global lastClickX, lastClickY
         lastClickX = event.x
         lastClickY = event.y
-
 
     def Dragging(self, event):
         x, y = event.x - lastClickX + self.window.winfo_x(), event.y - lastClickY + self.window.winfo_y()
@@ -113,7 +114,7 @@ class App:
             messagebox.showerror("ERROR", "Disable Mouse Control Function!")
 
     # Draw button's function
-    def palette_toggle(self):
+    def palette_toggle(self):   
         if self.p_is_on == False:
             self.palette_btn.config(bg="#2B7DF0")
             self.p_is_on = True
@@ -122,8 +123,6 @@ class App:
             self.palette_btn.config(bg="#6FC8EB")
             self.p_is_on = False
             self.side_window.withdraw()
-
-
 
     # Camera On/Off button's function
     def canvas_toggle(self):
@@ -135,7 +134,6 @@ class App:
             self.canvas.grid()
             self.canvas.config(state='normal')
             self.cam_btn.config(bg="#2B7DF0")
-
 
     ###---------- UI Functions -----------###
     # Since toolbar is removed a custom exit method is required
@@ -164,11 +162,9 @@ class App:
                 # If hand is detected do processing
                 if self.results.multi_hand_landmarks:
                     self.process()
-
                     ###---------- Mouse Control And Drawing ----------###
                     if self.m_is_on:
                         self.mouse()
-
                     ###---------- Typing ----------###
                     if self.t_is_on:
                         pass
@@ -177,7 +173,6 @@ class App:
     def display(self):
         # Display fps
         cv2.putText(self.frame, str(int(self.fps)),(20, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 3)
-
         # Send video frame to canvas
         self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.frame))
         self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
@@ -198,8 +193,7 @@ class App:
 
     # Mouse control decisions    
     def mouse(self):
-        hold = False
-        if self.click >100:
+        if self.click > 100:
             self.click -= 100
         # Left click if thumb and middle finger touched
         if self.distance(self.thumb, self.middle) < 25:
@@ -208,29 +202,35 @@ class App:
                 pyautogui.click()
 
         # Right click if thumb and ring finger touched
-        if self.distance(self.thumb, self.ring) < 20:
+        if self.distance(self.thumb, self.ring) < 25:
             self.click += 1
             if self.click % 10 == 0:
                 pyautogui.click(button="right")
 
         # Enable hold mode if thumb and pinky finger are together 
-        if self.distance(self.thumb, self.pinky) < 20:
-            hold = True
+        if self.distance(self.thumb, self.pinky) < 25:
+            self.click += 1
+            if self.click % 10 == 0:
+                if self.hold == False: 
+                    pyautogui.mouseDown()
+                    self.hold = True
+                else: 
+                    pyautogui.mouseUp()
+                    self.hold = False
 
         # Scale x, y coordinates to match screen size
         x = np.interp(self.index[1], (80, 560), (0, self.width))
         y = np.interp(self.index[2], (80, 400), (0, self.height))
 
-        
+        # Calcute move amount
         x_now, y_now = pyautogui.position()
         length = math.sqrt(pow(abs(x - x_now),2) + pow(abs(y - y_now),2))
 
-        if(length>5):
+        #if(length>5):
             # Move cursor in a thread
-            mouse_thread = Thread(target=self.move_cursor, args=(x, y, hold), daemon=True)
-            mouse_thread.start()
+        mouse_thread = Thread(target=self.move_cursor, args=(x, y, self.hold), daemon=True)
+        mouse_thread.start()
             
-
     # Get distance between two landmarks
     def distance(self, finger1, finger2):
         finger1_x, finger1_y = finger1[1:]
@@ -239,10 +239,8 @@ class App:
         return int(dist)
 
     def move_cursor(self, x, y, hold):
-        if hold == True: 
-            pyautogui.dragTo(x,y, button="left")
-        else: 
-            pyautogui.moveTo(x, y) 
+        pyautogui.moveTo(x, y)
         
+
 
 app = App(tkinter.Tk())
