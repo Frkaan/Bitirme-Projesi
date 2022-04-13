@@ -19,7 +19,7 @@ These sections will be briefly referred to as mouse control, drawing and typing 
 * [MediaPipe](https://mediapipe.dev/)
 * [Tensorflow](https://www.tensorflow.org/)
 * [Keras](https://keras.io/getting_started/)
-* 
+
 <!-- GETTING STARTED -->
 ## Getting Started
 
