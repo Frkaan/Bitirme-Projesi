@@ -71,7 +71,7 @@ Program gets realtime video feed with OpenCV methods. Then applies Mediapipe han
 * Right Click - Tap thumb with middle finger
 * Hold Left Click - Tap and hold thumb with little finger
 
-### Drawing Function
+### Draw Function
 Main purpose of this function is to be able to draw and paint on screen during presentations for better impressions. Program has a basic canvas painting window for this objective. But what makes it unique for this project is, it has an opacity setting which makes canvas nearly invisible during drawing or painting on it. User can use Hold Left Click motion to draw on this canvas.
 
 ### Type Function
