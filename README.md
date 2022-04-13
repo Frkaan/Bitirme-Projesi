@@ -52,7 +52,7 @@ These sections will be briefly referred to as mouse control, drawing and typing 
   ```sh
   pip install keras
   ```
- 
+
 ### Installation
 1. Clone the repo.
    ```sh
