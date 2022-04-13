@@ -1,4 +1,4 @@
-# Bitirme-Projesi
+# Final Project
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
