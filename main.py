@@ -3,19 +3,22 @@ from tkinter import messagebox
 import cv2
 import time
 import ctypes
+import string
 import math
 import pyautogui
-import numpy as np
+pyautogui.FAILSAFE = False
 import PIL.Image, PIL.ImageTk
 from threading import Thread
-
+import numpy as np
+from keras.models import load_model
 import SideWindow as sw
 import HandTracking as ht
 import VideoCapture as vp
-pyautogui.FAILSAFE = False
 
-lastClickX = 0
-lastClickY = 0
+LAST_CLICK_X = 0
+LAST_CLICK_Y = 0
+SHOW_LANDMARKS = False
+IMAGE_DIM = 28
 
 class App:
     def __init__(self, window):
@@ -26,8 +29,8 @@ class App:
         self.window.attributes('-topmost', True)
         self.window.overrideredirect(True)
         self.window.configure(background="#FFE547")
-        self.window.bind('<Button-1>', self.SaveLastClickPos)
-        self.window.bind('<B1-Motion>', self.Dragging)
+        self.window.bind('<Button-1>', self.saveLastClickPos)
+        self.window.bind('<B1-Motion>', self.dragging)
         
         ###---------- Building UI ----------###
         # Buttons Label
@@ -59,59 +62,77 @@ class App:
         self.canvas.config(state='disable')
         self.canvas.grid_remove()
 
-        #Side window for draw and type functions, hidden at start
+        # Side window for draw and type functions, hidden at start
         self.side_window = sw.SideWindow()
         self.side_window.withdraw()
 
-        ###----------- Video Capture -----------###
-        self.vid = vp.VideoCapture()
-
-        # Get screen size for mouse control
+        # Get screen size
         user32 = ctypes.windll.user32
         self.width, self.height = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 
+        ###----------- Video Capture -----------###
+        self.vid = vp.VideoCapture()        
+
         self.click = 0 # Delay variable for click event
         self.start = 0 # Fps calculation start time
-        self.hold = False
+        self.hold = False # Mouse button hold variable
         self.tracker = ht.HandTracker() # Init hand tracking module
-        
+
+        self.capture_delay = 0 # Delay variable for handsign recognition
+
+        # Load machine learning model
+        self.predictor = self.load_model("ai_model")
+        # Define pre-used prediction labels
+        self.labels = [char for char in string.ascii_uppercase if char != "J" if char != "Z"]
+
         # Start update thread
         read_process_thread = Thread(target = self.update, args=(), daemon=True)
         read_process_thread.start()
 
         self.window.mainloop()
 
-    def SaveLastClickPos(self, event):
-        global lastClickX, lastClickY
-        lastClickX = event.x
-        lastClickY = event.y
+    # Make main window draggable
+    def saveLastClickPos(self, event):
+        global LAST_CLICK_X, LAST_CLICK_Y
+        LAST_CLICK_X = event.x
+        LAST_CLICK_Y = event.y
 
-    def Dragging(self, event):
-        x, y = event.x - lastClickX + self.window.winfo_x(), event.y - lastClickY + self.window.winfo_y()
+    def dragging(self, event):
+        x, y = event.x - LAST_CLICK_X + self.window.winfo_x(), event.y - LAST_CLICK_Y + self.window.winfo_y()
         self.window.geometry("+%s+%s" % (x , y))
 
     ###---------- Buttons' Functions ----------###
     # Mouse control button's function
     def mouse_control(self):
-        if self.m_is_on == False  and self.t_is_on == False:
+        if self.m_is_on == False:
+            if self.t_is_on == True:
+                self.t_is_on = False
+                self.type_btn.config(bg="#6FC8EB")
             self.m_is_on = True
             self.mouse_btn.config(bg="#2B7DF0")
+
         elif self.m_is_on == True and self.t_is_on == False:
             self.m_is_on = False
             self.mouse_btn.config(bg="#6FC8EB")
+
         else:
-            messagebox.showerror("ERROR", "Disable Type Function!")
+            messagebox.showerror("ERROR", "Please restart program!")
 
     # Type button's function
     def typing(self):
-        if self.m_is_on == False and self.t_is_on == False:
+        if self.t_is_on == False:
+            if self.m_is_on == True: 
+                self.m_is_on = False
+                self.mouse_btn.config(bg="#6FC8EB")
             self.t_is_on = True
             self.type_btn.config(bg="#2B7DF0")
-        elif self.m_is_on == False and self.t_is_on == True:
+
+        elif self.t_is_on == True and self.m_is_on == False:
             self.t_is_on = False
             self.type_btn.config(bg="#6FC8EB")
+        
         else:
-            messagebox.showerror("ERROR", "Disable Mouse Control Function!")
+            messagebox.showerror("ERROR", "Please restart program!")
 
     # Draw button's function
     def palette_toggle(self):   
@@ -147,12 +168,11 @@ class App:
         while True:
             # Read frame, return flag, frame and landmark results
             # If you want to see landmarks use True instead
-            ret, self.frame, self.results = self.vid.get_frame(True)
+            ret, self.frame, self.results = self.vid.get_frame(SHOW_LANDMARKS)
             # Calculate fps
             end = time.time()
             self.fps = 1 / (end - self.start)
             self.start = end
-            #print("FPS:", int(fps))
 
             # Check if frame captured successfully
             if ret:
@@ -163,16 +183,29 @@ class App:
                 if self.results.multi_hand_landmarks:
                     self.process()
                     ###---------- Mouse Control And Drawing ----------###
-                    if self.m_is_on:
+                    if self.m_is_on and not self.t_is_on:
                         self.mouse()
+
                     ###---------- Typing ----------###
-                    if self.t_is_on:
-                        pass
+                    if self.t_is_on and not self.m_is_on:
+                        self.type_letter()
 
     ###---------- Display Video ----------###
     def display(self):
         # Display fps
-        cv2.putText(self.frame, str(int(self.fps)),(20, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 3)
+        cv2.putText(self.frame, 'fps:'+str(int(self.fps)),(10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0), 2)
+        # Highlighting the borders of control fields
+        # For mouse control
+        if self.m_is_on and not self.t_is_on:
+            cv2.putText(self.frame, 'KEEP YOUR HAND IN FRAME', (80, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,0), 2)
+            cv2.rectangle(self.frame, (80, 80), (560, 400), (255, 0, 0), 2)
+        # For type control
+        if self.t_is_on and not self.m_is_on:
+            cv2.putText(self.frame, 'SHOW HANDSIGN HERE', (350, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,0), 2)
+            cv2.putText(self.frame, 'AND WAIT FOR RECOGNITION', (330, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,0), 2)
+            cv2.rectangle(self.frame, (320, 0), (640, 480), (255, 0, 0), 2)
+            cv2.rectangle(self.frame, (320, 80), (640, 400), (255, 0, 0), 2)    
+
         # Send video frame to canvas
         self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(self.frame))
         self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
@@ -180,18 +213,18 @@ class App:
     ###---------- Get Finger Landmarks ----------###
     def process(self):
         self.tracker.load_results(self.results)
-        markList = self.tracker.get_hand_coordinates()
+        self.markList = self.tracker.get_hand_coordinates()
         # We only need tip of the fingers
-        self.thumb = markList[4]
-        self.index = markList[8]
-        self.middle = markList[12]
-        self.ring = markList[16]
-        self.pinky = markList[20]
+        self.thumb = self.markList[4]
+        self.index = self.markList[8]
+        self.middle = self.markList[12]
+        self.ring = self.markList[16]
+        self.pinky = self.markList[20]
 
-        if self.tracker.check_fingers(markList) == False:
+        if self.tracker.check_fingers(self.markList, [0, 0, 640, 480]) == False:
             print("Your hand is out of view!")
 
-    # Mouse control decisions    
+    # Mouse control decisions
     def mouse(self):
         if self.click > 100:
             self.click -= 100
@@ -222,14 +255,14 @@ class App:
         x = np.interp(self.index[1], (80, 560), (0, self.width))
         y = np.interp(self.index[2], (80, 400), (0, self.height))
 
-        # Calcute move amount
+        # Calculate move amount for cursor
         x_now, y_now = pyautogui.position()
         length = math.sqrt(pow(abs(x - x_now),2) + pow(abs(y - y_now),2))
 
-        #if(length>5):
+        if(length>5):
             # Move cursor in a thread
-        mouse_thread = Thread(target=self.move_cursor, args=(x, y, self.hold), daemon=True)
-        mouse_thread.start()
+            mouse_thread = Thread(target=self.move_cursor, args=(x, y), daemon=True)
+            mouse_thread.start()
             
     # Get distance between two landmarks
     def distance(self, finger1, finger2):
@@ -238,9 +271,48 @@ class App:
         dist = math.sqrt((finger2_x - finger1_x)**2 + (finger2_y - finger1_y)**2)
         return int(dist)
 
-    def move_cursor(self, x, y, hold):
+    # Cursor move method to be called in another thread
+    def move_cursor(self, x, y):
         pyautogui.moveTo(x, y)
+
+    # Detect, process, predict and type the handsign
+    def type_letter(self):
+        if self.tracker.check_fingers(self.markList, [320, 80, 640, 400]) == True:
+            self.capture_delay += 1
+            # Set a delay to give user enough time to position his handsign in showed area
+            if self.capture_delay == 60:
+                # Get one frame from detected handsign and process frame for prediction
+                handsign = self.frame[80:400, 320:640] # crop frame
+                handsign = cv2.cvtColor(handsign, cv2.COLOR_BGR2GRAY) # convert to grayscale
+                handsign = cv2.resize(handsign, (IMAGE_DIM,IMAGE_DIM), interpolation = cv2.INTER_AREA)
+                #cv2.imwrite('img.jpg', handsign) save handsign
+                handsign = handsign.reshape(1, IMAGE_DIM, IMAGE_DIM, 1) # reshape to model input shape
+
+                # Make the prediction
+                predicted_letter = self.make_pred(self.predictor, handsign)
+                pyautogui.hotkey('alt', 'tab')
+                pyautogui.press(predicted_letter.lower())
+
+                # Reset delay
+                self.capture_delay = 0
+
+                # Disable typing and enable mouse control
+                self.type_btn.invoke()
+                self.mouse_btn.invoke()
+
+        # If hand is out of box restart delay counter
+        else:
+            self.capture_delay = 0
+
+    # Load pretrained model and compile
+    def load_model(self, path):
+        return load_model(path)
         
+    # Make prediction using pretrained model
+    def make_pred(self, predictor, img):
+        pred = predictor.predict(img)
+        pred_label = self.labels[np.argmax(pred)]
+        return pred_label
 
-
-app = App(tkinter.Tk())
+if __name__ == "__main__":
+    app = App(tkinter.Tk())

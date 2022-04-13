@@ -21,9 +21,10 @@ class HandTracker:
 		return markList
 
 	# Check if all finger tips are in the frame
-	def check_fingers(self, markList):
+	def check_fingers(self, markList, borders):
 		for i in range(4,21,4):
-			if markList[i][1] > 640 or  markList[i][2] > 480 or markList[i][1] < 0 or markList[i][2] < 0:
+			#if markList[i][1] > 640 or  markList[i][2] > 480 or markList[i][1] < 0 or markList[i][2] < 0:
+			if (markList[i][1] < borders[0]) or  (markList[i][2] < borders[1]) or (markList[i][1] > borders[2]) or (markList[i][2] > borders[3]):
 				return False
 
 		return True

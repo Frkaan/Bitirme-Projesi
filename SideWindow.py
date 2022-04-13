@@ -32,15 +32,15 @@ class SideWindow:
         # Opacity Setting
         self.opacity = tkinter.Label(self.top_bar, text = "Opacity", bg = "#50BBEB", borderwidth=2, relief="ridge")
         self.opacity.config(font=("Courier Bold", 20))
-        self.opacity.grid(row = 0, column = 0, padx = 20, pady = 10)
+        self.opacity.grid(row = 0, column = 0, padx = 20, pady = 4)
 
-        self.slider = ttk.Scale(self.top_bar, from_ = 0.2, to = 1.0, value = 1.0, orient = tkinter.HORIZONTAL,command=self.slide)
+        self.slider = ttk.Scale(self.top_bar, from_ = 2, to = 10, value = 1.0, orient = tkinter.HORIZONTAL,command=self.slide)
         self.slider.grid(row = 1, column = 0, padx = 20, pady = 4)
 
         # Brush & Eraser Size Setting
         self.size = tkinter.Label(self.top_bar, text = "Brush Size", bg = "#50BBEB", borderwidth=2, relief="ridge")
         self.size.config(font=("Courier Bold", 20))
-        self.size.grid(row = 0, column = 1, padx = 20, pady = 10)
+        self.size.grid(row = 0, column = 1, padx = 20, pady = 4)
 
         self.size_slider = ttk.Scale(self.top_bar,from_ = 1, to = 10, value = 1, orient = tkinter.HORIZONTAL,command=self.slide)
         self.size_slider.grid(row = 1, column = 1, padx = 20, pady = 4)
@@ -48,7 +48,7 @@ class SideWindow:
         # Clear
         self.clear = tkinter.Button(self.top_bar, text= "Clear", bg= "#50BBEB", relief="ridge", command = self.clear_palette)
         self.clear.config(font=("Courier Bold", 20))
-        self.clear.grid(row = 0, column = 2, padx = 20, pady = 10)
+        self.clear.grid(row = 0, column = 2, padx = 20, pady = 4)
 
         # Selected Brush Color
         self.brush = tkinter.Label(self.top_bar, bg = "#000000", borderwidth=2, relief="ridge")
@@ -75,6 +75,7 @@ class SideWindow:
         self.green = tkinter.Button(self.colors, bg= self.color_list[4], bd=2, relief="ridge",command = lambda col = self.color_list[4]: self.select_color(col))
         self.green.grid(row=0, rowspan=2, column=4, sticky = "nsew")
         self.white = tkinter.Button(self.colors, bg= self.color_list[5], bd=2, text = "Eraser", relief="ridge",command = lambda col = self.color_list[5]: self.select_color(col))
+        self.white.config(font=("Courier Bold", 20))
         self.white.grid(row=0, rowspan=2, column=5, sticky = "nsew")
 
         # Palette
@@ -84,7 +85,7 @@ class SideWindow:
 
     # A slider is used for changing the opacity of side window
     def slide(self, x):
-        self.side_window.attributes('-alpha', self.slider.get())
+        self.side_window.attributes('-alpha', self.slider.get()/10)
 
     # Copying tkinter window object functions
     def withdraw(self):
