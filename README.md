@@ -13,7 +13,7 @@ In this project, an application will allow users to control mouse cursor and key
 
 These sections will be briefly referred to as mouse control, drawing and typing functions. Thanks to these functions to be accessed from the application's interface, it will be possible to control the computer using without any peripherals.
 
-### Built With
+## Built With
 * [Python](https://python.org/)
 * [OpenCV](https://opencv.org/)
 * [MediaPipe](https://mediapipe.dev/)
@@ -62,8 +62,8 @@ These sections will be briefly referred to as mouse control, drawing and typing 
 3. Make sure you have a camera connected to computer and available.
 4. Run code.
 
-### How Code Works?
-## Mouse Control Function
+## How Code Works?
+### Mouse Control Function
 Program gets realtime video feed with OpenCV methods. Then applies Mediapipe hand module on hand and gets landmarks of hand. These landmarks returns with coordinates of where they exist on the video frame. Use these coordinates and scale them to our screen size and detect where it matches on computer screen. Lastly using PyAutoGui mouse move method move mouse cursor to determined coordinates.
 
 * Move Mouse - Coordinates will be determined by tip of your index finger
@@ -71,9 +71,9 @@ Program gets realtime video feed with OpenCV methods. Then applies Mediapipe han
 * Right Click - Tap thumb with middle finger
 * Hold Left Click - Tap and hold thumb with little finger
 
-## Drawing Function
+### Drawing Function
 Main purpose of this function is to be able to draw and paint on screen during presentations for better impressions. Program has a basic canvas painting window for this objective. But what makes it unique for this project is, it has an opacity setting which makes canvas nearly invisible during drawing or painting on it. User can use Hold Left Click motion to draw on this canvas.
 
-## Type Function
+### Type Function
 For this function program will be using an artificial intelligence model to classify the letter to type and this model will be working on ASL sign language hand signs. Creating and training the model is secondary goal of this project. After completing this goal, model will be integrated to program and made available for hand sign prediction. When user activates type function an area in display will be shown to user to show hand sign. After a short recognition process, the image of this area will be sent to the artificial intelligence and the letter to be determined by the artificial intelligence will be written in the most recent input field on the computer.
 
