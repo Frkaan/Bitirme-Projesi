@@ -60,7 +60,7 @@ These sections will be briefly referred to as mouse control, drawing and typing 
    ```
 2. Install required packages.
 3. Make sure you have a camera connected to computer and available.
-4. Run code.
+4. Run main.py.
 
 ## How Code Works?
 ### Mouse Control Function
@@ -68,7 +68,7 @@ Program gets realtime video feed with OpenCV methods. Then applies Mediapipe han
 
 * Move Mouse - Coordinates will be determined by tip of your index finger
 * Left Click - Tap thumb with middle finger
-* Right Click - Tap thumb with middle finger
+* Right Click - Tap thumb with ring finger
 * Hold Left Click - Tap and hold thumb with little finger
 
 ### Draw Function
