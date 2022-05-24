@@ -23,7 +23,7 @@ IMAGE_DIM = 28
 class App:
     def __init__(self, window):
         ###---------- Main Window Configurations ----------###
-        # Main window will stay at top-left corner and always on top of other windows
+        # Main window will stay at top-left corner and always on top of other windows   
         self.window = window
         self.window.resizable(False, False)
         self.window.attributes('-topmost', True)
@@ -32,7 +32,7 @@ class App:
         self.window.bind('<Button-1>', self.saveLastClickPos)
         self.window.bind('<B1-Motion>', self.dragging)
         
-        ###---------- Building UI ----------###
+        ###---------- UI Elements ----------###
         # Buttons Label
         buttonLabel = tkinter.Label(self.window, borderwidth=4, relief="ridge")
         buttonLabel.configure(background="#FFE547")
@@ -81,7 +81,7 @@ class App:
         self.capture_delay = 0 # Delay variable for handsign recognition
 
         # Load machine learning model
-        self.predictor = self.load_model("ai_model")
+        self.predictor = load_model("ai_model")
         # Define pre-used prediction labels
         self.labels = [char for char in string.ascii_uppercase if char != "J" if char != "Z"]
 
@@ -280,17 +280,24 @@ class App:
         if self.tracker.check_fingers(self.markList, [320, 80, 640, 400]) == True:
             self.capture_delay += 1
             # Set a delay to give user enough time to position his handsign in showed area
-            if self.capture_delay == 60:
+            if self.capture_delay == 10:
                 # Get one frame from detected handsign and process frame for prediction
                 handsign = self.frame[80:400, 320:640] # crop frame
-                handsign = cv2.cvtColor(handsign, cv2.COLOR_BGR2GRAY) # convert to grayscale
-                handsign = cv2.resize(handsign, (IMAGE_DIM,IMAGE_DIM), interpolation = cv2.INTER_AREA)
-                #cv2.imwrite('img.jpg', handsign) save handsign
-                handsign = handsign.reshape(1, IMAGE_DIM, IMAGE_DIM, 1) # reshape to model input shape
+                #cv2.imwrite('img_raw.jpg', handsign)
+
+                img = cv2.cvtColor(handsign, cv2.COLOR_BGR2GRAY)
+                # For threshold #
+                #blur = cv2.GaussianBlur(gray,(3,3),2)
+                #adp_th = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+                #ret, img = cv2.threshold(adp_th, 0, 255, cv2.THRESH_OTSU)
+                out = cv2.resize(img, (128,128), interpolation = cv2.INTER_AREA)
+                out = out.reshape(1, 128, 128, 1) # reshape to model input
 
                 # Make the prediction
-                predicted_letter = self.make_pred(self.predictor, handsign)
+                predicted_letter = self.make_pred(self.predictor, out)
+                # Return to input area
                 pyautogui.hotkey('alt', 'tab')
+                # Type letter
                 pyautogui.press(predicted_letter.lower())
 
                 # Reset delay
@@ -303,10 +310,6 @@ class App:
         # If hand is out of box restart delay counter
         else:
             self.capture_delay = 0
-
-    # Load pretrained model and compile
-    def load_model(self, path):
-        return load_model(path)
         
     # Make prediction using pretrained model
     def make_pred(self, predictor, img):
